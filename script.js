@@ -1,11 +1,14 @@
-console.log("test");
-
 var margin, width, height;
 var data;
 var svg;
 var x, y;
+var users = [];
+var gameWeek = -1;
 
 window.onload = () => {
+
+
+    /*
 
     margin = {
             top: 20,
@@ -105,57 +108,7 @@ window.onload = () => {
             throw error;
         })
 
-    // setInterval(() => {
-    //     updateChart();
-    // }, 2000);
-
-    /*
-    d3.csv("sales.csv", function (error, _data) {
-        data = _data;
-        if (error) throw error;
-
-        // format the data
-        data.forEach(function (d) {
-            d.sales = +d.sales;
-        });
-
-        // Scale the range of the data in the domains
-        x.domain(data.map(function (d) {
-            return d.salesperson;
-        }));
-        y.domain([0, d3.max(data, function (d) {
-            return d.sales;
-        })]);
-
-        // append the rectangles for the bar chart
-        svg.selectAll(".bar")
-            .data(data)
-            .enter().append("rect")
-            .attr("class", "bar")
-            .attr("x", function (d) {
-                return x(d.salesperson);
-            })
-            .attr("width", x.bandwidth())
-            .attr("y", function (d) {
-                return y(d.sales);
-            })
-            .attr("height", function (d) {
-                return height - y(d.sales);
-            });
-
-        //add the x Axis
-        svg.append("g")
-            .attr("transform", "translate(0," + height + ")")
-            .attr("class", "xAxis")
-            .call(d3.axisBottom(x));
-
-        // add the y Axis
-        svg.append("g")
-            .attr("class", "yAxis")
-            .call(d3.axisLeft(y));
-
-    });
-    */
+        */
 
 }
 
@@ -412,59 +365,232 @@ loadData = () => {
 
 plData = () => {
 
-    const url = "https://fantasy.premierleague.com/drf/leagues-classic-standings/494638";
-    const url2 ="https://fantasy.premierleague.com/drf/entry/48049/history";
-    const url3 ="https://opinionated-quotes-api.gigalixirapp.com/v1/quotes";
+    let league = 494638;
 
-    // var test = $.ajax({
-    //     dataType: "json",
-    //     url: url,
-    //     data: data,
-    //     success: success
-    //   });
+    const proxyurl = "https://cors-anywhere.herokuapp.com/"
+    const url = `https://fantasy.premierleague.com/drf/leagues-classic-standings/${league}`;
 
-    //   $.getJSON( url, (json) => {
-    //     console.log(json);
-    //   });
+    $.ajax({
+        url: proxyurl + url,
+        type: "GET",
+        headers: {
+            'Access-Control-Allow-Origin': '*'
+        },
+        success: function (data) {
+            console.log(data);
+            data.standings.results.forEach((user) => {
+                // users.push(user.entry);
+                $.ajax({
+                    url: `${proxyurl}https://fantasy.premierleague.com/drf/entry/${user.entry}/history`,
+                    type: "GET",
+                    success: (userData) => {
+                        let person = {
+                            "entry_id": user.entry,
+                            "total_pts": []
+                        };
+                        userData.history.forEach((week) => {
+                            person.total_pts.push(week.total_points)
+                        })
+                        users.push(person);
+                    }
+                })
+            })
+        },
+        error: function (error) {
+            console.log(error);
+        }
+    });
+}
 
-    $.get( url, function( data ) {
-        alert( "Data Loaded: " + data );
-      });
+$(document).ajaxStop(() => {
+    console.log(users);
+    createChartPL(users);
+});
 
-    //   $.ajax({
-    //     url: url3,
-    //     // dataType: "json",
-    //     headers: { 'Access-Control-Allow-Origin': '*' },
-    //     async: true,
-    //     success: function(data) {
-    //         console.log(data);
-    //     },
-    //     error: function(error) {
-    //         console.log(error);
-    //     }
+createChartPL = (users) => {
+
+    users = reorderPL();
+
+    margin = {
+            top: 20,
+            right: 20,
+            bottom: 30,
+            left: 40
+        },
+        width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
+
+    // set the ranges
+    x = d3.scaleBand()
+        .range([0, width])
+        .padding(0.1);
+    y = d3.scaleLinear()
+        .range([height, 0]);
+
+    // append the svg object to the body of the page
+    // append a 'group' element to 'svg'
+    // moves the 'group' element to the top left margin
+    svg = d3.select(".chart").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
+
+    // d3.select(".chart").append("div")
+    // .html(
+    //     "<div class='navigationDiv' ><button class='navigateButton' onclick=''>|<</button> <button class='navigateButton' onclick=''><<</button><button class='navigateButton' onclick=''>></button><button class='navigateButton' onclick=''>>></button><button class='navigateButton' onclick=''>>|</button></div>"
+    // )
+
+    x.domain(users.map(function (d) {
+        return d.entry_id;
+    }));
+    y.domain([0, d3.max(users, function (d) {
+        return d.total_pts[0];
+    })]);
+
+    // append the rectangles for the bar chart
+    svg.selectAll(".bar")
+        .data(users)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", function (d) {
+            return x(d.entry_id);
+        })
+        .attr("width", x.bandwidth())
+        .attr("y", function (d) {
+            return y(0);
+        })
+        .attr("height", function (d) {
+            return height - y(0);
+        })
+        .attr("fill", (d) => {
+            return getRandomColor();
+        });
+    // .attr("fill", (d) => {
+    //     return getColor(1 - d.total_pts[gameWeek] / 100);
     // });
 
-    // d3.json("https://fantasy.premierleague.com/drf/leagues-classic-standings/494638")
-    //     .header("Access-Control-Allow-Origin", "*")
-    //     .post((json) => {
-    //         console.log(json);
-    //     })
+    svg.selectAll("text")
+        .data(users)
+        .enter()
+        .append("text")
+        .text(function (d) {
+            return 0;
+        })
+        .attr("class", "chartLabel")
+        .attr("text-anchor", "middle")
+        .attr("x", function (d, i) {
+            return x(d.entry_id) + x.bandwidth() / 2;
+        })
+        .attr("y", function (d) {
+            return y(0) - 10;
+        })
+        .attr("font-family", "sans-serif")
+        .attr("font-size", "11px")
+        .attr("fill", "black");
 
-    // fetch("https://fantasy.premierleague.com/drf/leagues-classic-standings/494638", {
-    //     headers: new Headers({
-    //         "Access-Control-Allow-Origin": "*"
-    //     }),
-    // }).then(response => {
-    //     console.log(response.json);
-    // })
+    //add the x Axis
+    svg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .attr("class", "xAxis")
+        .call(d3.axisBottom(x));
 
-    // d3.json("https://fantasy.premierleague.com/drf/leagues-classic-standings/494638"), (json) => {
-    //     console.log(json);
-    // })
+    // add the y Axis
+    svg.append("g")
+        .attr("class", "yAxis")
+        .call(d3.axisLeft(y));
 
-    // d3.request("https://fantasy.premierleague.com/drf/leagues-classic-standings/494638")
-    //     .header("Content-Type", "application/json")
-    //     .post((json) => {
-    //         console.log(json);
-    //     })
 }
+
+reorderPL = () => {
+    users.sort((a, b) => {
+        return b.total_pts[gameWeek] - a.total_pts[gameWeek];
+    })
+    return users;
+
+}
+
+updateChartPL = () => {
+
+    // gameWeek++;
+
+    users = reorderPL();
+
+    x.domain(users.map(function (d) {
+        return d.entry_id;
+    }));
+    y.domain([0, d3.max(users, function (d) {
+        return d.total_pts[gameWeek];
+    })]);
+
+    svg.selectAll("rect")
+        .transition()
+        .duration(2000)
+        .attr("x", (d) => {
+            return x(d.entry_id);
+        })
+        .attr("y", (d) => {
+            return y(d.total_pts[gameWeek]);
+        })
+        .attr("height", function (d) {
+            return height - y(d.total_pts[gameWeek]);
+        })
+    // .attr("fill", (d) => {
+    //     return getColor(1 - d.total_pts[gameWeek] / 100);
+    // });
+
+    svg.selectAll(".chartLabel")
+        .transition().duration(2000)
+        .text(function (d) {
+            return d.total_pts[gameWeek];
+        })
+        .attr("text-anchor", "middle")
+        .attr("x", function (d, i) {
+            return x(d.entry_id) + x.bandwidth() / 2;
+        })
+        .attr("y", function (d) {
+            return y(d.total_pts[gameWeek]) - 10;
+        })
+
+
+    d3.select(".xAxis")
+        .attr("transform", "translate(0," + height + ")")
+        .transition().duration(2000)
+        .call(d3.axisBottom(x));
+
+
+    d3.select(".yAxis")
+        .transition().duration(2000)
+        .call(d3.axisLeft(y));
+}
+
+goToFirst = () => {
+    gameWeek = 0;
+    updateChartPL()
+};
+
+goBackOne = () => {
+    if (gameWeek > 0) {
+        gameWeek--;
+        updateChartPL();
+    }
+};
+
+play = () => {
+    setInterval(() => {
+        gameWeek++;
+        updateChartPL()
+    }, 2000)
+};
+
+goForwardOne = () => {
+    gameWeek++;
+    updateChartPL();
+};
+
+goToLast = () => {
+    gameWeek = users[0].total_pts.length - 1;
+    updateChartPL();
+};

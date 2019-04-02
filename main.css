@@ -1,3 +1,20 @@
-.buttonDiv {
+/* .buttonDiv {
     float: right;
+} */
+
+
+.navigationDiv {
+    margin: auto;
+    width: 200px;
+    /* vertical-align: 50%; */
+}
+
+.navigateButton {
+    
+    background-color: Transparent;
+    background-repeat:no-repeat;
+    border: none;
+    cursor:pointer;
+    overflow: hidden;
+    outline:none;
 }

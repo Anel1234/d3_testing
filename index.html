@@ -14,7 +14,22 @@
 </head>
 
 <body>
-    <div class="chart"></div>
+
+    <div class="chart">
+
+
+    </div>
+    <div class="navigationDiv">
+        <button class="navigateButton" onclick="goToFirst()">|<</button>
+        <button class="navigateButton" onclick="goBackOne()"><<</button>
+        <button class="navigateButton" onclick="play()">></button>
+        <button class="navigateButton" onclick="goForwardOne()">>></button>
+        <button class="navigateButton" onclick="goToLast()">>|</button>
+    </div>
+
+
+
+
 
     <div class="buttonDiv">
         <button onclick="updateChart()">Update</button>
@@ -22,7 +37,9 @@
         <button onclick="updateChartRepeat()">RepeatUpdate</button>
         <button onclick="loadData()">LoadData</button>
         <button onclick="plData()">LoadPL</button>
+        <button onclick="updateChartPL()">UpdatePL</button>
     </div>
+
 
 </body>
 
