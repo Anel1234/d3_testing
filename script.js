@@ -168,7 +168,7 @@ updateChartRepeat = () => {
 
 randomlyAddToData = () => {
     data.forEach(d => {
-        d.sales += randomIntFromInterval(0,5);
+        d.sales += randomIntFromInterval(0, 5);
     });
 }
 
@@ -398,14 +398,73 @@ slideBars = () => {
         .transition().duration(2000)
         .call(d3.axisBottom(x));
 
-        console.table(data);
+    console.table(data);
 
 }
 
 loadData = () => {
     d3.json("pl.json")
-    .then(data => {
-        console.log(data);
-    });
+        .then(data => {
+            console.log(data);
+        });
 
+}
+
+plData = () => {
+
+    const url = "https://fantasy.premierleague.com/drf/leagues-classic-standings/494638";
+    const url2 ="https://fantasy.premierleague.com/drf/entry/48049/history";
+    const url3 ="https://opinionated-quotes-api.gigalixirapp.com/v1/quotes";
+
+    // var test = $.ajax({
+    //     dataType: "json",
+    //     url: url,
+    //     data: data,
+    //     success: success
+    //   });
+
+    //   $.getJSON( url, (json) => {
+    //     console.log(json);
+    //   });
+
+    $.get( url, function( data ) {
+        alert( "Data Loaded: " + data );
+      });
+
+    //   $.ajax({
+    //     url: url3,
+    //     // dataType: "json",
+    //     headers: { 'Access-Control-Allow-Origin': '*' },
+    //     async: true,
+    //     success: function(data) {
+    //         console.log(data);
+    //     },
+    //     error: function(error) {
+    //         console.log(error);
+    //     }
+    // });
+
+    // d3.json("https://fantasy.premierleague.com/drf/leagues-classic-standings/494638")
+    //     .header("Access-Control-Allow-Origin", "*")
+    //     .post((json) => {
+    //         console.log(json);
+    //     })
+
+    // fetch("https://fantasy.premierleague.com/drf/leagues-classic-standings/494638", {
+    //     headers: new Headers({
+    //         "Access-Control-Allow-Origin": "*"
+    //     }),
+    // }).then(response => {
+    //     console.log(response.json);
+    // })
+
+    // d3.json("https://fantasy.premierleague.com/drf/leagues-classic-standings/494638"), (json) => {
+    //     console.log(json);
+    // })
+
+    // d3.request("https://fantasy.premierleague.com/drf/leagues-classic-standings/494638")
+    //     .header("Content-Type", "application/json")
+    //     .post((json) => {
+    //         console.log(json);
+    //     })
 }
