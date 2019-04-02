@@ -521,7 +521,12 @@ updateChartPL = () => {
     x.domain(users.map(function (d) {
         return d.entry_id;
     }));
-    y.domain([0, d3.max(users, function (d) {
+    y.domain([d3.min(users, (d) => {
+        if(d.total_pts[gameWeek] < 100) {
+            return 0;
+        }
+        return d.total_pts[gameWeek] - 100;
+    }), d3.max(users, function (d) {
         return d.total_pts[gameWeek];
     })]);
 
@@ -579,15 +584,21 @@ goBackOne = () => {
 };
 
 play = () => {
-    setInterval(() => {
-        gameWeek++;
-        updateChartPL()
+    let playSeason = setInterval(() => {
+        if (gameWeek < users[0].total_pts.length - 1) {
+            gameWeek++;
+            updateChartPL()
+        } else {
+            clearInterval(playSeason);
+        }
     }, 2000)
 };
 
 goForwardOne = () => {
-    gameWeek++;
-    updateChartPL();
+    if (gameWeek < users[0].total_pts.length - 1) {
+        gameWeek++;
+        updateChartPL();
+    }
 };
 
 goToLast = () => {
