@@ -3,7 +3,7 @@ var data;
 var svg;
 var x, y;
 var users = [];
-var gameWeek = -1;
+var gameWeek = 0;
 
 window.onload = () => {
 
@@ -366,6 +366,7 @@ loadData = () => {
 plData = () => {
 
     let league = 494638;
+    //league = 494658;
 
     const proxyurl = "https://cors-anywhere.herokuapp.com/"
     const url = `https://fantasy.premierleague.com/drf/leagues-classic-standings/${league}`;
@@ -384,14 +385,17 @@ plData = () => {
                     url: `${proxyurl}https://fantasy.premierleague.com/drf/entry/${user.entry}/history`,
                     type: "GET",
                     success: (userData) => {
-                        let person = {
-                            "entry_id": user.entry,
-                            "total_pts": []
-                        };
-                        userData.history.forEach((week) => {
-                            person.total_pts.push(week.total_points)
-                        })
-                        users.push(person);
+                        // let person = {
+                        //     "entry_id": user.entry,
+                        //     "total_pts": [],
+                        //     "week_pts": []
+                        // };
+                        // userData.history.forEach((week) => {
+                        //     person.total_pts.push(week.total_points);
+                        //     person.week_pts.push(week.points);
+                        // })
+                        // users.push(person);
+                        users.push(userData);
                     }
                 })
             })
@@ -414,7 +418,7 @@ createChartPL = (users) => {
     margin = {
             top: 20,
             right: 20,
-            bottom: 30,
+            bottom: 130,
             left: 40
         },
         width = 960 - margin.left - margin.right,
@@ -444,11 +448,16 @@ createChartPL = (users) => {
     // )
 
     x.domain(users.map(function (d) {
-        return d.entry_id;
+        return d.entry.id;
     }));
     y.domain([0, d3.max(users, function (d) {
-        return d.total_pts[0];
+        return d.history[0].total_points;
     })]);
+
+    //tooltip div
+    var div = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
 
     // append the rectangles for the bar chart
     svg.selectAll(".bar")
@@ -456,7 +465,7 @@ createChartPL = (users) => {
         .enter().append("rect")
         .attr("class", "bar")
         .attr("x", function (d) {
-            return x(d.entry_id);
+            return x(d.entry.id);
         })
         .attr("width", x.bandwidth())
         .attr("y", function (d) {
@@ -467,7 +476,20 @@ createChartPL = (users) => {
         })
         .attr("fill", (d) => {
             return getRandomColor();
-        });
+        })
+        .on("mouseover", (d) => {
+            div.transition()
+                .duration(200)
+                .style("opacity", 0.9);
+            div.html(d.history[gameWeek].points)
+                .style("left", (d3.event.pageX) + "px")
+                .style("top", (d3.event.pageY - 28) + "px");
+        })
+        .on("mouseout", (d) => {
+            div.transition()
+                .duration(500)
+                .style("opacity", 0)
+        })
     // .attr("fill", (d) => {
     //     return getColor(1 - d.total_pts[gameWeek] / 100);
     // });
@@ -482,7 +504,7 @@ createChartPL = (users) => {
         .attr("class", "chartLabel")
         .attr("text-anchor", "middle")
         .attr("x", function (d, i) {
-            return x(d.entry_id) + x.bandwidth() / 2;
+            return x(d.entry.id) + x.bandwidth() / 2;
         })
         .attr("y", function (d) {
             return y(0) - 10;
@@ -502,14 +524,20 @@ createChartPL = (users) => {
         .attr("class", "yAxis")
         .call(d3.axisLeft(y));
 
+    svg.select(".xAxis").selectAll("g").select("text")
+        .style("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", "-.5em")
+        .attr("transform", "rotate(-90)")
+    // .attr("dy", width/2)
+
 }
 
 reorderPL = () => {
     users.sort((a, b) => {
-        return b.total_pts[gameWeek] - a.total_pts[gameWeek];
+        return b.history[gameWeek].total_points - a.history[gameWeek].total_points;
     })
     return users;
-
 }
 
 updateChartPL = () => {
@@ -519,44 +547,44 @@ updateChartPL = () => {
     users = reorderPL();
 
     x.domain(users.map(function (d) {
-        return d.entry_id;
+        return d.entry.id;
     }));
     y.domain([d3.min(users, (d) => {
-        if(d.total_pts[gameWeek] < 100) {
+        if (d.history[gameWeek].total_points < 100) {
             return 0;
         }
-        return d.total_pts[gameWeek] - 100;
+        return d.history[gameWeek].total_points - 100;
     }), d3.max(users, function (d) {
-        return d.total_pts[gameWeek];
+        return d.history[gameWeek].total_points;
     })]);
 
     svg.selectAll("rect")
         .transition()
         .duration(2000)
         .attr("x", (d) => {
-            return x(d.entry_id);
+            return x(d.entry.id);
         })
         .attr("y", (d) => {
-            return y(d.total_pts[gameWeek]);
+            return y(d.history[gameWeek].total_points);
         })
         .attr("height", function (d) {
-            return height - y(d.total_pts[gameWeek]);
+            return height - y(d.history[gameWeek].total_points);
         })
     // .attr("fill", (d) => {
-    //     return getColor(1 - d.total_pts[gameWeek] / 100);
+    //     return getColor(1 - d.history[gameWeek].total_points / 100);
     // });
 
     svg.selectAll(".chartLabel")
         .transition().duration(2000)
         .text(function (d) {
-            return d.total_pts[gameWeek];
+            return d.history[gameWeek].total_points;
         })
         .attr("text-anchor", "middle")
         .attr("x", function (d, i) {
-            return x(d.entry_id) + x.bandwidth() / 2;
+            return x(d.entry.id) + x.bandwidth() / 2;
         })
         .attr("y", function (d) {
-            return y(d.total_pts[gameWeek]) - 10;
+            return y(d.history[gameWeek].total_points) - 10;
         })
 
 
@@ -585,7 +613,7 @@ goBackOne = () => {
 
 play = () => {
     let playSeason = setInterval(() => {
-        if (gameWeek < users[0].total_pts.length - 1) {
+        if (gameWeek < users[0].history.length - 1) {
             gameWeek++;
             updateChartPL()
         } else {
@@ -595,13 +623,13 @@ play = () => {
 };
 
 goForwardOne = () => {
-    if (gameWeek < users[0].total_pts.length - 1) {
+    if (gameWeek < users[0].history.length - 1) {
         gameWeek++;
         updateChartPL();
     }
 };
 
 goToLast = () => {
-    gameWeek = users[0].total_pts.length - 1;
+    gameWeek = users[0].history.length - 1;
     updateChartPL();
 };
