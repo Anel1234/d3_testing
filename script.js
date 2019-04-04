@@ -4,6 +4,7 @@ var svg;
 var x, y;
 var users = [];
 var gameWeek = 0;
+var currentUser = 0;
 
 window.onload = () => {
 
@@ -395,7 +396,19 @@ plData = () => {
                         //     person.week_pts.push(week.points);
                         // })
                         // users.push(person);
+                        userData.color = getRandomColor();
+                        userData.history.unshift({
+                            "event": 0,
+                            "event_transfers": 0,
+                            "points": 0,
+                            "total_points": 0,
+                            "points_on_bench": 0,
+                            "overall_rank": 0,
+                            "rank": 0,
+                            "value": 1000
+                        });
                         users.push(userData);
+                        console.log(userData);
                     }
                 })
             })
@@ -407,7 +420,7 @@ plData = () => {
 }
 
 $(document).ajaxStop(() => {
-    console.log(users);
+    createCombobox();
     createChartPL(users);
 });
 
@@ -450,9 +463,10 @@ createChartPL = (users) => {
     x.domain(users.map(function (d) {
         return d.entry.id;
     }));
-    y.domain([0, d3.max(users, function (d) {
-        return d.history[0].total_points;
-    })]);
+    y.domain([0, 100]);
+    // y.domain([0, d3.max(users, function (d) {
+    //     return d.history[0].total_points;
+    // })]);
 
     //tooltip div
     var div = d3.select("body").append("div")
@@ -475,17 +489,48 @@ createChartPL = (users) => {
             return height - y(0);
         })
         .attr("fill", (d) => {
-            return getRandomColor();
+            return d.color;
+            //return getRandomColor();
         })
-        .on("mouseover", (d) => {
+        .on("mouseenter", (d) => {
+            currentUser = d;
+            d3.select(d3.event.target).attr("fill", "#afeeee")
+            let rect = d3.event.target.getBoundingClientRect();
+
             div.transition()
                 .duration(200)
                 .style("opacity", 0.9);
-            div.html(d.history[gameWeek].points)
-                .style("left", (d3.event.pageX) + "px")
-                .style("top", (d3.event.pageY - 28) + "px");
+            div.html(`
+                <table>
+                <tr>
+                <td>Points:</td>
+                <td>${d.history[gameWeek].points}</td>
+                </tr>
+                <tr>
+                <td>Bench Points:</td>
+                <td>${d.history[gameWeek].points_on_bench}</td>
+                </tr>
+                <tr>
+                <td>Transfers:</td>
+                <td>${d.history[gameWeek].event_transfers}</td>
+                </tr>
+                <tr>
+                <td>Transfers Cost:</td>
+                <td>${d.history[gameWeek].event_transfers_cost}</td>
+                </tr>
+                <tr>
+                <td>Overall Rank:</td>
+                <td>${d.history[gameWeek].overall_rank}</td>
+                </tr>
+            `)
+                // replace style if you want tooltip to appear near where you hover
+                // .style("left", (d3.event.pageX) + "px")
+                // .style("top", (d3.event.pageY - 28) + "px");
+                .style("left", rect.left + 0.5 * rect.width + "px")
+                .style("top", rect.top + 0.2 * rect.height + "px");
         })
         .on("mouseout", (d) => {
+            d3.select(d3.event.target).attr("fill", d.color)
             div.transition()
                 .duration(500)
                 .style("opacity", 0)
@@ -494,13 +539,11 @@ createChartPL = (users) => {
     //     return getColor(1 - d.total_pts[gameWeek] / 100);
     // });
 
-    svg.selectAll("text")
+    svg.selectAll("text.chartLabel")
         .data(users)
         .enter()
         .append("text")
-        .text(function (d) {
-            return 0;
-        })
+        .text(0)
         .attr("class", "chartLabel")
         .attr("text-anchor", "middle")
         .attr("x", function (d, i) {
@@ -513,6 +556,27 @@ createChartPL = (users) => {
         .attr("font-size", "11px")
         .attr("fill", "black");
 
+    svg.selectAll("text.wildcard")
+        .data(users)
+        .enter()
+        .append("text")
+        .text((d) => {
+            d.chips.forEach(chip => {
+                if (chip.event == gameWeek) {
+                    return chip.name;
+                }
+            })
+            return "";
+        })
+        .attr("class", "wildcard")
+        .attr("x", function (d, i) {
+            return x(d.entry.id) + x.bandwidth() / 2;
+        })
+        .attr("y", function (d) {
+            return y(0) - 10;
+        })
+
+
     //add the x Axis
     svg.append("g")
         .attr("transform", "translate(0," + height + ")")
@@ -524,6 +588,7 @@ createChartPL = (users) => {
         .attr("class", "yAxis")
         .call(d3.axisLeft(y));
 
+    //makes x Axis labels horizontal
     svg.select(".xAxis").selectAll("g").select("text")
         .style("text-anchor", "end")
         .attr("dx", "-.8em")
@@ -543,6 +608,8 @@ reorderPL = () => {
 updateChartPL = () => {
 
     // gameWeek++;
+    d3.select('.select')
+        .property('value', gameWeek);
 
     users = reorderPL();
 
@@ -554,7 +621,10 @@ updateChartPL = () => {
             return 0;
         }
         return d.history[gameWeek].total_points - 100;
-    }), d3.max(users, function (d) {
+    }), d3.max(users, (d) => {
+        if (d.history[gameWeek].total_points == 0) {
+            return 100;
+        }
         return d.history[gameWeek].total_points;
     })]);
 
@@ -587,6 +657,22 @@ updateChartPL = () => {
             return y(d.history[gameWeek].total_points) - 10;
         })
 
+    svg.selectAll(".wildcard")
+        .text((d) => {
+            let chipName = ""
+            d.chips.forEach(chip => {
+                if (chip.event == gameWeek) {
+                    chipName = chip.name;
+                }
+            })
+            return chipName;
+        })
+        .attr("x", function (d, i) {
+            return x(d.entry.id) + x.bandwidth() / 2;
+        })
+        .attr("y", function (d) {
+            return y(d.history[gameWeek].total_points) - 10;
+        })
 
     d3.select(".xAxis")
         .attr("transform", "translate(0," + height + ")")
@@ -597,6 +683,38 @@ updateChartPL = () => {
     d3.select(".yAxis")
         .transition().duration(2000)
         .call(d3.axisLeft(y));
+
+
+    //if the tooltip has been assigned then update it with new data
+    if (currentUser) {
+        d3.select(".tooltip")
+            .html(
+                `<table>
+            <tr>
+            <td>Points:</td>
+            <td>${currentUser.history[gameWeek].points}</td>
+            </tr>
+            <tr>
+            <td>Bench Points:</td>
+            <td>${currentUser.history[gameWeek].points_on_bench}</td>
+            </tr>
+            <tr>
+            <td>Transfers:</td>
+            <td>${currentUser.history[gameWeek].event_transfers}</td>
+            </tr>
+            <tr>
+            <td>Transfers Cost:</td>
+            <td>-${currentUser.history[gameWeek].event_transfers_cost}</td>
+            </tr>
+            <tr>
+            <td>Overall Rank:</td>
+            <td>${currentUser.history[gameWeek].overall_rank}</td>
+            </tr>`
+            )
+    }
+
+
+
 }
 
 goToFirst = () => {
@@ -633,3 +751,23 @@ goToLast = () => {
     gameWeek = users[0].history.length - 1;
     updateChartPL();
 };
+
+createCombobox = () => {
+
+    let select = d3.select(".selectDiv")
+        .append('select')
+        .attr('class', 'select')
+        .on('change', selectChange)
+
+    select.selectAll('option')
+        .data(users[0].history).enter()
+        .append('option')
+        .text((d) => {
+            return d.event;
+        })
+}
+
+selectChange = () => {
+    gameWeek = d3.select('select').property('value');
+    updateChartPL()
+}
