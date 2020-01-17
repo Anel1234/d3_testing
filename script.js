@@ -444,6 +444,9 @@ createChartPL = (users) => {
     y = d3.scaleLinear()
         .range([height, 0]);
 
+        console.log(x);
+        console.log(y);
+
     // append the svg object to the body of the page
     // append a 'group' element to 'svg'
     // moves the 'group' element to the top left margin
@@ -479,10 +482,12 @@ createChartPL = (users) => {
         .enter().append("rect")
         .attr("class", "bar")
         .attr("x", function (d) {
+            console.log(x);
             return x(d.entry.id);
         })
         .attr("width", x.bandwidth())
         .attr("y", function (d) {
+            console.log(y);
             return y(0);
         })
         .attr("height", function (d) {
